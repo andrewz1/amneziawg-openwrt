@@ -36,26 +36,6 @@ proto_amneziawg_init_config() {
 	no_proto_task=1
 }
 
-proto_amneziawg_is_kernel_mode() {
-	if [ ! -e /sys/module/amneziawg ]; then
-		modprobe amneziawg >/dev/null 2>&1 || true
-
-		if [ -e /sys/module/amneziawg ]; then
-			return 0
-		else
-			if ! command -v "${WG_QUICK_USERSPACE_IMPLEMENTATION:-amneziawg-go}" >/dev/null; then
-				ret=$?
-				echo "Please install either kernel module (kmod-amneziawg package) or user-space implementation in /usr/bin/amneziawg-go."
-				exit $ret
-			else
-				return 1
-			fi
-		fi
-	else
-		return 0
-	fi
-}
-
 proto_amneziawg_setup_peer() {
 	local peer_config="$1"
 
@@ -199,15 +179,9 @@ proto_amneziawg_setup() {
 	config_get awg_h3 "${config}" "awg_h3"
 	config_get awg_h4 "${config}" "awg_h4"
 
-	if proto_amneziawg_is_kernel_mode; then
-		logger -t "amneziawg" "info: using kernel-space kmod-amneziawg for ${WG}"
-  	ip link del dev "${config}" 2>/dev/null
-		ip link add dev "${config}" type amneziawg
-	else
-		logger -t "amneziawg" "info: using user-space amneziawg-go for ${WG}"
-		rm -f "/var/run/wireguard/${config}.sock"
-		amneziawg-go "${config}"
-	fi
+	logger -t "amneziawg" "info: using user-space amneziawg-go for ${WG}"
+	rm -f "/var/run/amneziawg/${config}.sock"
+	amneziawg-go "${config}"
 
 	if [ "${mtu}" ]; then
 		ip link set mtu "${mtu}" dev "${config}"
@@ -227,31 +201,31 @@ proto_amneziawg_setup() {
 	fi
 	# AWG
 	if [ "${awg_jc}" ]; then
-		echo "Jc = ${awg_jc}" >> "${wg_cfg}"
+		echo "Jc=${awg_jc}" >> "${wg_cfg}"
 	fi
 	if [ "${awg_jmin}" ]; then
-		echo "Jmin = ${awg_jmin}" >> "${wg_cfg}"
+		echo "Jmin=${awg_jmin}" >> "${wg_cfg}"
 	fi
 	if [ "${awg_jmax}" ]; then
-		echo "Jmax = ${awg_jmax}" >> "${wg_cfg}"
+		echo "Jmax=${awg_jmax}" >> "${wg_cfg}"
 	fi
 	if [ "${awg_s1}" ]; then
-		echo "S1 = ${awg_s1}" >> "${wg_cfg}"
+		echo "S1=${awg_s1}" >> "${wg_cfg}"
 	fi
 	if [ "${awg_s2}" ]; then
-		echo "S2 = ${awg_s2}" >> "${wg_cfg}"
+		echo "S2=${awg_s2}" >> "${wg_cfg}"
 	fi
 	if [ "${awg_h1}" ]; then
-		echo "H1 = ${awg_h1}" >> "${wg_cfg}"
+		echo "H1=${awg_h1}" >> "${wg_cfg}"
 	fi
 	if [ "${awg_h2}" ]; then
-		echo "H2 = ${awg_h2}" >> "${wg_cfg}"
+		echo "H2=${awg_h2}" >> "${wg_cfg}"
 	fi
 	if [ "${awg_h3}" ]; then
-		echo "H3 = ${awg_h3}" >> "${wg_cfg}"
+		echo "H3=${awg_h3}" >> "${wg_cfg}"
 	fi
 	if [ "${awg_h4}" ]; then
-		echo "H4 = ${awg_h4}" >> "${wg_cfg}"
+		echo "H4=${awg_h4}" >> "${wg_cfg}"
 	fi
 
 	config_foreach proto_amneziawg_setup_peer "amneziawg_${config}"
@@ -305,12 +279,7 @@ proto_amneziawg_setup() {
 
 proto_amneziawg_teardown() {
 	local config="$1"
-	proto_amneziawg_check_installed
-	if proto_amneziawg_is_kernel_mode; then
-		ip link del dev "${config}" >/dev/null 2>&1
-	else
-		rm -f "/var/run/amneziawg/${config}.sock"
-	fi
+	rm -f "/var/run/amneziawg/${config}.sock"
 }
 
 [ -n "$INCLUDE_ONLY" ] || {
