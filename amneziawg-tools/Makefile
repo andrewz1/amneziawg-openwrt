@@ -39,7 +39,7 @@ endef
 
 define Package/amneziawg-tools/description
   Amnezia VPN — simple and free app to run a self-hosted VPN with
-	high privacy requirements.
+  high privacy requirements.
 
   This package provides the userspace control program for AmneziaWG,
   `amneziawg`, a netifd protocol helper, and a re-resolve watchdog script.
